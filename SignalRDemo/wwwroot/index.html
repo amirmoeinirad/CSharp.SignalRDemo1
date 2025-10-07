@@ -1,0 +1,81 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+
+    <head>
+
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>SignalR Chat</title>
+
+        <!-- This loads the .NET SignalR JavaScript library from a CDN -->
+        <!-- JavaScript fully supports SignalR via the @microsoft/signalr library or client. -->
+        <!-- So, SignalR has both a server side and a client side. -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
+
+    </head>
+
+    <body>
+
+        <h2>Simple WebSocket (SignalR) Chat</h2>
+        <h3>Hello World from the frontend!</h3>
+        <input type="text" id="userInput" placeholder="Your Name" />
+        <input type="text" id="messageInput" placeholder="Your Message" />
+        <button onclick="sendMessage()">Send</button>
+        <ul id="messagesList"></ul>
+
+        <script>
+
+            // (1)
+            // Creating / Setting up a.NET SignalR connection
+            // SignalR on the server side automatically changes the protocol from https to websockets secure 'wss' under the hood.
+            // HTTPS must be enabled on the SignalR server.
+            const connection = new signalR.HubConnectionBuilder()
+                .withUrl("https://localhost:7000/ChatHub")  // Connect to the backend (SignalR Hub) via the ChatHub class.
+                .build();
+
+
+            // (2)
+            // Starting the connection
+            // The log message can be viewed in the client browser console window (F12).
+            connection.start().then(() => {
+                console.log("Connected to the .NET SignalR server"); // Runs when the connection is successful.
+            }).catch(err => console.error(err)); // Catches errors (e.g., CORS issues, wrong URL).
+
+
+            // (3)
+            // Receiving Messages from the Server
+            // This listens for messages from the backend/server.
+            // The ReceiveMessage event is triggered by the SignalR server.
+            // After that, the callback function (second input parameter) is invoked.
+            connection.on("ReceiveMessage", (text, user, message, dateTime) => {
+                const li = document.createElement("li");
+                li.textContent = `${text} - ${user} - ${message} - Server DateTime: ${dateTime}`;
+                document.getElementById("messagesList").appendChild(li);
+            });
+
+
+            // (4)
+            // Sending Messages to the Server
+            // Calls the C# function SendMessage in ChatHub.cs
+            let timeout;
+            function sendMessage() {
+                // Auto-close the connection after 5 minutes.
+                // This reduces resource wastage and increases security by closing idle conections.
+                clearTimeout(timeout);
+                timeout = setTimeout(() => connection.close(), 300000);
+
+                const text = "";
+                const user = document.getElementById("userInput").value;
+                const message = document.getElementById("messageInput").value;
+                dateTime = new Date();
+                dateTime = dateTime.toLocaleString("en-US");
+                connection.invoke("SendMessage", text, user, message, dateTime).catch(err => console.error(err));
+            }
+
+        </script>
+
+    </body>
+
+</html>
